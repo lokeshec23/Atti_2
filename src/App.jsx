@@ -7,12 +7,14 @@ import Register from './components/Register'
 import Dashboard from './components/Dashboard'
 import TeamDirectory from './components/TeamDirectory'
 import Settings from './components/Settings'
-import { Bell, Search, LogOut } from 'lucide-react'
+import Modal from './components/Modal'
+import { Bell, Search, LogOut, Bot } from 'lucide-react'
 
 function App() {
   const [activeTab, setActiveTab] = useState('tasks')
   const [user, setUser] = useState(null)
   const [isLoginView, setIsLoginView] = useState(true)
+  const [isAIModalOpen, setIsAIModalOpen] = useState(false)
 
   useEffect(() => {
     const savedUser = localStorage.getItem('user');
@@ -42,7 +44,11 @@ function App() {
 
   return (
     <div className="app-container">
-      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+      <Sidebar 
+        activeTab={activeTab} 
+        setActiveTab={setActiveTab} 
+        onOpenAI={() => setIsAIModalOpen(true)} 
+      />
       
       <main className="main-content">
         <header className="header">
@@ -80,11 +86,45 @@ function App() {
           {activeTab === 'dashboard' && <Dashboard />}
           {activeTab === 'team' && <TeamDirectory />}
           {activeTab === 'settings' && <Settings />}
-          
-          {/* AI Assistant is permanently visible in this layout on the side */}
-          <AIAssistant />
         </div>
       </main>
+
+      <Modal 
+        isOpen={isAIModalOpen} 
+        onClose={() => setIsAIModalOpen(false)} 
+        title="Team AI Assistant"
+      >
+        <div style={{ height: '500px' }}>
+          <AIAssistant />
+        </div>
+      </Modal>
+
+      {/* Floating AI Button for quick access */}
+      <button 
+        onClick={() => setIsAIModalOpen(true)}
+        style={{
+          position: 'fixed',
+          bottom: '2rem',
+          right: '2rem',
+          width: '56px',
+          height: '56px',
+          borderRadius: '50%',
+          background: 'var(--accent-color)',
+          color: 'white',
+          border: 'none',
+          boxShadow: '0 10px 15px -3px rgba(99, 102, 241, 0.4)',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 100,
+          transition: 'all 0.3s ease'
+        }}
+        onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.1) rotate(5deg)'}
+        onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1) rotate(0)'}
+      >
+        <Bot size={28} />
+      </button>
     </div>
   )
 }

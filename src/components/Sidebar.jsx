@@ -1,7 +1,7 @@
 import React from 'react';
-import { LayoutDashboard, CheckSquare, Users, Settings, Sparkles } from 'lucide-react';
+import { LayoutDashboard, CheckSquare, Users, Settings, Sparkles, Bot } from 'lucide-react';
 
-export default function Sidebar({ activeTab, setActiveTab }) {
+export default function Sidebar({ activeTab, setActiveTab, onOpenAI }) {
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={18} /> },
     { id: 'tasks', label: 'Tasks', icon: <CheckSquare size={18} /> },
@@ -27,6 +27,31 @@ export default function Sidebar({ activeTab, setActiveTab }) {
           </li>
         ))}
       </ul>
+
+      <div style={{ marginTop: 'auto', padding: '1rem' }}>
+        <button 
+          onClick={onOpenAI}
+          style={{
+            width: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.75rem',
+            padding: '0.75rem 1rem',
+            background: 'rgba(99, 102, 241, 0.1)',
+            color: 'var(--accent-color)',
+            border: '1px solid rgba(99, 102, 241, 0.2)',
+            borderRadius: '8px',
+            fontWeight: 600,
+            cursor: 'pointer',
+            transition: 'var(--transition)'
+          }}
+          onMouseOver={(e) => { e.currentTarget.style.background = 'var(--accent-color)'; e.currentTarget.style.color = 'white'; }}
+          onMouseOut={(e) => { e.currentTarget.style.background = 'rgba(99, 102, 241, 0.1)'; e.currentTarget.style.color = 'var(--accent-color)'; }}
+        >
+          <Bot size={18} />
+          AI Assistant
+        </button>
+      </div>
     </aside>
   );
 }
