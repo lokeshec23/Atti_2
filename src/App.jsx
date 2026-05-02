@@ -1,132 +1,230 @@
-import React, { useState, useEffect } from 'react'
-import Sidebar from './components/Sidebar'
-import TaskBoard from './components/TaskBoard'
-import AIAssistant from './components/AIAssistant'
-import Login from './components/Login'
-import Register from './components/Register'
-import Dashboard from './components/Dashboard'
-import TeamDirectory from './components/TeamDirectory'
-import Settings from './components/Settings'
-import Modal from './components/Modal'
-import { Bell, Search, LogOut, Bot } from 'lucide-react'
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import Sidebar from './components/Sidebar';
+import TaskBoard from './components/TaskBoard';
+import AIAssistant from './components/AIAssistant';
+import Login from './components/Login';
+import Register from './components/Register';
+import Dashboard from './components/Dashboard';
+import TeamDirectory from './components/TeamDirectory';
+import Settings from './components/Settings';
+import Modal from './components/Modal';
+import { Bell, Search, LogOut, Bot } from 'lucide-react';
+
+const PAGE_TITLES = {
+  dashboard: 'Dashboard',
+  tasks:     'Task Board',
+  team:      'Team Directory',
+  settings:  'Settings',
+};
 
 function App() {
-  const [activeTab, setActiveTab] = useState('tasks')
-  const [user, setUser] = useState(null)
-  const [isLoginView, setIsLoginView] = useState(true)
-  const [isAIModalOpen, setIsAIModalOpen] = useState(false)
+  const [activeTab,      setActiveTab]      = useState('dashboard');
+  const [user,           setUser]           = useState(null);
+  const [isLoginView,    setIsLoginView]    = useState(true);
+  const [isAIModalOpen,  setIsAIModalOpen]  = useState(false);
 
+  // Ref for the floating AI button so Modal can restore focus on close
+  const aiFloatBtnRef = useRef(null);
+
+  // ── Bootstrap user session ───────────────────────────────
   useEffect(() => {
-    const savedUser = localStorage.getItem('user');
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
+    const saved = localStorage.getItem('user');
+    if (saved) {
+      try { setUser(JSON.parse(saved)); } catch { /* ignore corrupt data */ }
     }
   }, []);
 
-  const handleLogout = () => {
+  // ── Apply saved theme on mount ───────────────────────────
+  useEffect(() => {
+    const saved = localStorage.getItem('theme_preference');
+    const theme = saved ? JSON.parse(saved) : 'light';
+    const resolved =
+      theme === 'system'
+        ? window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+        : theme;
+    document.documentElement.setAttribute('data-theme', resolved);
+  }, []);
+
+  // ── Update page title ────────────────────────────────────
+  useEffect(() => {
+    document.title = `${PAGE_TITLES[activeTab] || 'CollabNode'} · CollabNode`;
+  }, [activeTab]);
+
+  const handleLogout = useCallback(() => {
     localStorage.removeItem('user');
     setUser(null);
-  }
+  }, []);
 
+  const handleLogin = useCallback(() => {
+    const saved = localStorage.getItem('user');
+    if (saved) setUser(JSON.parse(saved));
+  }, []);
+
+  // ── Auth screens ─────────────────────────────────────────
   if (!user) {
     return isLoginView ? (
-      <Login 
-        onLogin={() => setUser(JSON.parse(localStorage.getItem('user')))} 
-        onSwitch={() => setIsLoginView(false)} 
-      />
+      <Login onLogin={handleLogin} onSwitch={() => setIsLoginView(false)} />
     ) : (
-      <Register 
-        onRegister={() => setUser(JSON.parse(localStorage.getItem('user')))} 
-        onSwitch={() => setIsLoginView(true)} 
-      />
-    )
+      <Register onRegister={handleLogin} onSwitch={() => setIsLoginView(true)} />
+    );
   }
 
+  const userInitial = user.name?.charAt(0).toUpperCase() ?? '?';
+
   return (
-    <div className="app-container">
-      <Sidebar 
-        activeTab={activeTab} 
-        setActiveTab={setActiveTab} 
-        onOpenAI={() => setIsAIModalOpen(true)} 
-      />
-      
-      <main className="main-content">
-        <header className="header">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <h2 style={{ fontSize: '1.25rem', fontWeight: 500 }}>
-              {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
+    <>
+      {/* ── Skip Navigation ─────────────────────────── */}
+      <a href="#main-content" className="skip-nav">
+        Skip to main content
+      </a>
+
+      <div className="app-container">
+        {/* ── Sidebar ─────────────────────────────────── */}
+        <Sidebar
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          onOpenAI={() => setIsAIModalOpen(true)}
+        />
+
+        {/* ── Main ────────────────────────────────────── */}
+        <main className="main-content" id="main-content" tabIndex="-1">
+          {/* Header */}
+          <header className="header" role="banner">
+            <h2 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-color)' }}>
+              {PAGE_TITLES[activeTab]}
             </h2>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-            <div style={{ position: 'relative' }}>
-              <Search size={16} style={{ position: 'absolute', left: '8px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
-              <input 
-                type="text" 
-                placeholder="Search..." 
-                style={{ padding: '0.5rem 0.5rem 0.5rem 2rem', borderRadius: '4px', border: '1px solid var(--border-color)', outline: 'none', background: 'var(--bg-color)', color: 'var(--text-color)' }}
-              />
-            </div>
-            <button className="icon-btn" style={{ position: 'relative' }}>
-              <Bell size={20} />
-              <span style={{ position: 'absolute', top: 0, right: 0, width: '8px', height: '8px', background: 'var(--danger)', borderRadius: '50%' }}></span>
-            </button>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: 'var(--accent-color)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
-                {user.name.charAt(0).toUpperCase()}
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              {/* Search */}
+              <div style={{ position: 'relative' }}>
+                <Search
+                  size={15}
+                  aria-hidden="true"
+                  style={{
+                    position: 'absolute', left: '0.7rem', top: '50%',
+                    transform: 'translateY(-50%)', color: 'var(--text-secondary)',
+                    pointerEvents: 'none',
+                  }}
+                />
+                <input
+                  type="search"
+                  placeholder="Search…"
+                  aria-label="Search application"
+                  style={{
+                    padding: '0.45rem 0.75rem 0.45rem 2.1rem',
+                    borderRadius: '8px',
+                    border: '1.5px solid var(--border-color)',
+                    background: 'var(--bg-color)',
+                    color: 'var(--text-color)',
+                    fontSize: '0.875rem',
+                    outline: 'none',
+                    width: '200px',
+                    transition: 'border-color 0.2s',
+                    fontFamily: 'inherit',
+                  }}
+                  onFocus={(e) => (e.target.style.borderColor = 'var(--accent-color)')}
+                  onBlur={(e)  => (e.target.style.borderColor = 'var(--border-color)')}
+                />
               </div>
-              <button onClick={handleLogout} className="icon-btn" title="Logout">
-                <LogOut size={18} />
+
+              {/* Notifications */}
+              <button
+                className="icon-btn"
+                aria-label="Notifications (1 new)"
+                style={{ position: 'relative' }}
+              >
+                <Bell size={19} aria-hidden="true" />
+                <span
+                  aria-hidden="true"
+                  style={{
+                    position: 'absolute', top: '2px', right: '2px',
+                    width: '7px', height: '7px',
+                    background: 'var(--danger)', borderRadius: '50%',
+                  }}
+                />
               </button>
+
+              {/* User avatar + logout */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <div
+                  aria-hidden="true"
+                  title={user.name}
+                  style={{
+                    width: '34px', height: '34px', borderRadius: '50%',
+                    background: 'linear-gradient(135deg, var(--accent-color), #8b5cf6)',
+                    color: '#fff',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontWeight: 700, fontSize: '0.9rem',
+                    flexShrink: 0,
+                  }}
+                >
+                  {userInitial}
+                </div>
+                <button
+                  onClick={handleLogout}
+                  className="icon-btn"
+                  aria-label={`Log out as ${user.name}`}
+                  title="Log out"
+                >
+                  <LogOut size={17} aria-hidden="true" />
+                </button>
+              </div>
             </div>
+          </header>
+
+          {/* Content */}
+          <div className="content-area">
+            {activeTab === 'dashboard' && <Dashboard />}
+            {activeTab === 'tasks'     && <TaskBoard />}
+            {activeTab === 'team'      && <TeamDirectory />}
+            {activeTab === 'settings'  && <Settings />}
           </div>
-        </header>
+        </main>
+      </div>
 
-        <div className="content-area">
-          {activeTab === 'tasks' && <TaskBoard />}
-          {activeTab === 'dashboard' && <Dashboard />}
-          {activeTab === 'team' && <TeamDirectory />}
-          {activeTab === 'settings' && <Settings />}
-        </div>
-      </main>
-
-      <Modal 
-        isOpen={isAIModalOpen} 
-        onClose={() => setIsAIModalOpen(false)} 
+      {/* ── AI Modal ──────────────────────────────────── */}
+      <Modal
+        isOpen={isAIModalOpen}
+        onClose={() => setIsAIModalOpen(false)}
         title="Team AI Assistant"
+        triggerRef={aiFloatBtnRef}
       >
         <div style={{ height: '500px' }}>
           <AIAssistant />
         </div>
       </Modal>
 
-      {/* Floating AI Button for quick access */}
-      <button 
+      {/* ── Floating AI Button ────────────────────────── */}
+      <button
+        ref={aiFloatBtnRef}
         onClick={() => setIsAIModalOpen(true)}
+        aria-label="Open AI Assistant"
+        aria-haspopup="dialog"
         style={{
-          position: 'fixed',
-          bottom: '2rem',
-          right: '2rem',
-          width: '56px',
-          height: '56px',
-          borderRadius: '50%',
+          position: 'fixed', bottom: '2rem', right: '2rem',
+          width: '56px', height: '56px', borderRadius: '50%',
           background: 'var(--accent-color)',
-          color: 'white',
-          border: 'none',
-          boxShadow: '0 10px 15px -3px rgba(99, 102, 241, 0.4)',
+          color: '#fff', border: 'none',
+          boxShadow: '0 8px 20px -4px rgba(99, 102, 241, 0.5)',
           cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
           zIndex: 100,
-          transition: 'all 0.3s ease'
+          transition: 'transform 0.25s ease, box-shadow 0.25s ease',
+          fontFamily: 'inherit',
         }}
-        onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.1) rotate(5deg)'}
-        onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1) rotate(0)'}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.transform  = 'scale(1.1) rotate(5deg)';
+          e.currentTarget.style.boxShadow  = '0 12px 28px -4px rgba(99,102,241,0.65)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.transform  = 'scale(1) rotate(0deg)';
+          e.currentTarget.style.boxShadow  = '0 8px 20px -4px rgba(99, 102, 241, 0.5)';
+        }}
       >
-        <Bot size={28} />
+        <Bot size={26} aria-hidden="true" />
       </button>
-    </div>
-  )
+    </>
+  );
 }
 
-export default App
+export default App;

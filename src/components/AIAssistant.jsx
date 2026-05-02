@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Bot, Send, User, Trash2, Sparkles, Plus } from 'lucide-react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 
-const GEMINI_API_KEY = "AIzaSyCbgVTkqwaE35810ZStHf8YusW8KvQeQ4k"; // User will replace this
+const GEMINI_API_KEY = AIzaSyCbgVTkqwaE35810ZStHf8YusW8KvQeQ4k; // User will replace this
 
 export default function AIAssistant() {
   const [messages, setMessages] = useLocalStorage('ai_chat_history', [
@@ -30,10 +30,10 @@ export default function AIAssistant() {
     setIsLoading(true);
 
     try {
-      if (GEMINI_API_KEY === "AIzaSyCbgVTkqwaE35810ZStHf8YusW8KvQeQ4k") {
-        setMessages(prev => [...prev, { 
-          id: Date.now() + 1, 
-          role: 'assistant', 
+      if (GEMINI_API_KEY === AIzaSyCbgVTkqwaE35810ZStHf8YusW8KvQeQ4k) {
+        setMessages(prev => [...prev, {
+          id: Date.now() + 1,
+          role: 'assistant',
           text: "I'm in demo mode. To enable my full capabilities, please provide a valid Gemini API key. In the meantime, I can simulate task suggestions!",
           isDemo: true
         }]);
@@ -83,7 +83,7 @@ export default function AIAssistant() {
           </div>
           <span style={{ fontWeight: 600 }}>Team AI Assistant</span>
         </div>
-        <button 
+        <button
           onClick={handleClearChat}
           style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '0.4rem', borderRadius: '6px' }}
           onMouseOver={(e) => e.currentTarget.style.color = 'var(--danger)'}
@@ -96,14 +96,14 @@ export default function AIAssistant() {
 
       <div className="ai-messages" style={{ flex: 1, overflowY: 'auto', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
         {messages.map(msg => (
-          <div key={msg.id} style={{ 
+          <div key={msg.id} style={{
             alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start',
             maxWidth: '85%',
             display: 'flex',
             flexDirection: 'column',
             gap: '0.25rem'
           }}>
-            <div style={{ 
+            <div style={{
               padding: '0.875rem 1.125rem',
               borderRadius: msg.role === 'user' ? '16px 16px 2px 16px' : '16px 16px 16px 2px',
               background: msg.role === 'user' ? 'var(--accent-color)' : 'var(--bg-color)',
@@ -142,12 +142,12 @@ export default function AIAssistant() {
 
       <div style={{ padding: '1.25rem', borderTop: '1px solid var(--border-color)', background: 'var(--surface-color)' }}>
         <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem' }}>
-          <button 
+          <button
             onClick={suggestTasks}
-            style={{ 
-              display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.4rem 0.8rem', 
-              borderRadius: '20px', background: 'rgba(99, 102, 241, 0.1)', color: 'var(--accent-color)', 
-              border: '1px solid rgba(99, 102, 241, 0.2)', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' 
+            style={{
+              display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.4rem 0.8rem',
+              borderRadius: '20px', background: 'rgba(99, 102, 241, 0.1)', color: 'var(--accent-color)',
+              border: '1px solid rgba(99, 102, 241, 0.2)', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer'
             }}
           >
             <Sparkles size={14} /> Suggest Tasks
@@ -170,7 +170,7 @@ export default function AIAssistant() {
               fontSize: '0.95rem'
             }}
           />
-          <button 
+          <button
             onClick={() => handleSend()}
             disabled={isLoading || !input.trim()}
             style={{

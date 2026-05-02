@@ -1,60 +1,77 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 
 /**
  * Custom hook for persistent state using localStorage.
- * Focuses on efficiency and error handling.
- * 
+ * Focuses on efficiency, error handling, and correctness.
+ *
+ * Key fix: `setValue` uses a `latestValueRef` so the callback never captures
+ * a stale `storedValue` closure, making rapid functional updates safe.
+ *
  * @param {string} key - The key to use in localStorage
  * @param {any} initialValue - The initial value if no value exists in localStorage
- * @returns {[any, function]} - Returns the state and a setter function
+ * @returns {[any, function, function]} - [state, setter, remover]
  */
 export function useLocalStorage(key, initialValue) {
-  // Use a lazy initializer to avoid reading from localStorage on every render
+  // Lazy initializer — reads localStorage only on mount, not every render
   const [storedValue, setStoredValue] = useState(() => {
-    if (typeof window === 'undefined') {
-      return initialValue;
-    }
-
+    if (typeof window === 'undefined') return initialValue;
     try {
       const item = window.localStorage.getItem(key);
-      return item ? JSON.parse(item) : initialValue;
+      return item !== null ? JSON.parse(item) : initialValue;
     } catch (error) {
-      console.warn(`Error reading localStorage key "${key}":`, error);
+      console.warn(`[useLocalStorage] Error reading key "${key}":`, error);
       return initialValue;
     }
   });
 
-  // Use useCallback for the setter to maintain referential stability
-  const setValue = useCallback((value) => {
-    try {
-      // Allow value to be a function so we have same API as useState
-      const valueToStore = value instanceof Function ? value(storedValue) : value;
-      
-      setStoredValue(valueToStore);
+  // Keep a ref in sync so setValue never has a stale closure over storedValue
+  const latestValueRef = useRef(storedValue);
+  useEffect(() => {
+    latestValueRef.current = storedValue;
+  }, [storedValue]);
 
+  const setValue = useCallback(
+    (value) => {
+      try {
+        const valueToStore =
+          value instanceof Function ? value(latestValueRef.current) : value;
+        setStoredValue(valueToStore);
+        if (typeof window !== 'undefined') {
+          window.localStorage.setItem(key, JSON.stringify(valueToStore));
+        }
+      } catch (error) {
+        console.error(`[useLocalStorage] Error setting key "${key}":`, error);
+      }
+    },
+    [key] // ✅ No storedValue dep — uses ref instead
+  );
+
+  /** Completely removes the key from localStorage and resets to initialValue */
+  const removeValue = useCallback(() => {
+    try {
+      setStoredValue(initialValue);
       if (typeof window !== 'undefined') {
-        window.localStorage.setItem(key, JSON.stringify(valueToStore));
+        window.localStorage.removeItem(key);
       }
     } catch (error) {
-      console.error(`Error setting localStorage key "${key}":`, error);
+      console.error(`[useLocalStorage] Error removing key "${key}":`, error);
     }
-  }, [key, storedValue]);
+  }, [key, initialValue]);
 
-  // Sync state across multiple tabs/windows
+  // Sync state across multiple browser tabs/windows
   useEffect(() => {
     const handleStorageChange = (e) => {
-      if (e.key === key && e.newValue) {
-        try {
-          setStoredValue(JSON.parse(e.newValue));
-        } catch (error) {
-          console.error(`Error parsing synced storage for "${key}":`, error);
-        }
+      if (e.key !== key) return;
+      try {
+        const next = e.newValue !== null ? JSON.parse(e.newValue) : initialValue;
+        setStoredValue(next);
+      } catch (error) {
+        console.error(`[useLocalStorage] Error syncing key "${key}":`, error);
       }
     };
-
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
-  }, [key]);
+  }, [key, initialValue]);
 
-  return [storedValue, setValue];
+  return [storedValue, setValue, removeValue];
 }

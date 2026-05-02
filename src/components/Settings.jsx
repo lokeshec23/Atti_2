@@ -1,132 +1,228 @@
-import React from 'react';
-import { Save, Moon, Sun, Bell } from 'lucide-react';
+import React, { useCallback, useState } from 'react';
+import { Save, Moon, Sun, Bell, Monitor, CheckCircle } from 'lucide-react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 
+/* ── Simple Toast ────────────────────────────────────────── */
+function Toast({ message }) {
+  if (!message) return null;
+  return (
+    <div className="toast-container" role="status" aria-live="polite" aria-atomic="true">
+      <div className="toast" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <CheckCircle size={16} aria-hidden="true" />
+        {message}
+      </div>
+    </div>
+  );
+}
+
+/* ── Toggle Switch ───────────────────────────────────────── */
+function ToggleSwitch({ checked, onChange, id, label }) {
+  function handleKeyDown(e) {
+    if (e.key === ' ' || e.key === 'Enter') {
+      e.preventDefault();
+      onChange(!checked);
+    }
+  }
+
+  return (
+    <button
+      id={id}
+      role="switch"
+      aria-checked={checked}
+      aria-label={label}
+      onClick={() => onChange(!checked)}
+      onKeyDown={handleKeyDown}
+      style={{
+        width: '48px', height: '26px',
+        background: checked ? 'var(--accent-color)' : 'var(--border-color)',
+        borderRadius: '13px',
+        border: 'none',
+        cursor: 'pointer',
+        position: 'relative',
+        transition: 'background 0.3s ease',
+        flexShrink: 0,
+        padding: 0,
+      }}
+    >
+      <span
+        aria-hidden="true"
+        style={{
+          position: 'absolute',
+          width: '20px', height: '20px',
+          background: 'white',
+          borderRadius: '50%',
+          top: '3px',
+          left: checked ? '25px' : '3px',
+          transition: 'left 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          boxShadow: '0 2px 4px rgba(0,0,0,0.25)',
+        }}
+      />
+    </button>
+  );
+}
+
+/* ── Section Card ────────────────────────────────────────── */
+function SettingsCard({ children }) {
+  return (
+    <div style={{
+      background: 'var(--surface-color)',
+      border: '1px solid var(--border-color)',
+      borderRadius: '16px',
+      padding: '1.75rem',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '1.5rem',
+      boxShadow: 'var(--shadow-sm)',
+    }}>
+      {children}
+    </div>
+  );
+}
+
+function SettingsRow({ label, description, control }) {
+  return (
+    <div style={{
+      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+      padding: '1rem 1.25rem',
+      background: 'var(--bg-color)',
+      borderRadius: '12px',
+      gap: '1rem',
+      flexWrap: 'wrap',
+    }}>
+      <div style={{ flex: 1, minWidth: '160px' }}>
+        <p style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-color)', margin: 0 }}>{label}</p>
+        {description && (
+          <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '0.2rem 0 0 0' }}>
+            {description}
+          </p>
+        )}
+      </div>
+      <div>{control}</div>
+    </div>
+  );
+}
+
+/* ── Settings Page ───────────────────────────────────────── */
 export default function Settings() {
-  const [theme, setTheme] = useLocalStorage('theme_preference', 'dark');
+  const [theme, setTheme]                 = useLocalStorage('theme_preference', 'light');
   const [notifications, setNotifications] = useLocalStorage('notification_preference', true);
+  const [toastMsg, setToastMsg]           = useState('');
+
+  const THEME_ICONS = { light: Sun, dark: Moon, system: Monitor };
+
+  /** Apply theme immediately to the DOM */
+  const applyTheme = useCallback((value) => {
+    setTheme(value);
+    const resolved = value === 'system'
+      ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+      : value;
+    document.documentElement.setAttribute('data-theme', resolved);
+  }, [setTheme]);
+
+  const showToast = (msg) => {
+    setToastMsg(msg);
+    setTimeout(() => setToastMsg(''), 3000);
+  };
 
   const handleSave = () => {
-    // With useLocalStorage, data is saved automatically on change,
-    // but we can provide feedback here.
-    alert('Settings synchronized and saved!');
+    // Theme is applied instantly; this just gives user confirmation
+    showToast('Settings saved successfully!');
   };
 
   return (
-    <div style={{ padding: '2rem', maxWidth: '800px', margin: '0 auto' }}>
-      <div style={{ marginBottom: '2.5rem' }}>
-        <h2 style={{ fontSize: '1.75rem', fontWeight: 700, marginBottom: '0.5rem' }}>Settings</h2>
-        <p style={{ color: 'var(--text-secondary)' }}>Customize your workspace experience</p>
-      </div>
-      
-      <div style={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '1.5rem'
-      }}>
-        
-        <div style={{
-          background: 'var(--surface-color)',
-          padding: '2rem',
-          borderRadius: '16px',
-          border: '1px solid var(--border-color)',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '2rem'
-        }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
-              <Sun size={20} style={{ color: 'var(--accent-color)' }} />
-              <h3 style={{ fontSize: '1.1rem', fontWeight: 600, margin: 0 }}>Appearance</h3>
-            </div>
-            
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem', background: 'var(--bg-color)', borderRadius: '12px' }}>
-              <div>
-                <p style={{ margin: 0, fontWeight: 500 }}>Theme Preference</p>
-                <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Choose how the platform looks to you</p>
-              </div>
-              <select 
-                value={theme} 
-                onChange={(e) => setTheme(e.target.value)}
-                style={{
-                  padding: '0.6rem 1rem',
-                  borderRadius: '8px',
-                  background: 'var(--surface-color)',
-                  color: 'var(--text-color)',
-                  border: '1px solid var(--border-color)',
-                  cursor: 'pointer',
-                  fontSize: '0.9rem'
-                }}
-              >
-                <option value="light">Light Mode</option>
-                <option value="dark">Dark Mode</option>
-                <option value="system">System Default</option>
-              </select>
-            </div>
+    <div style={{ padding: '2rem', maxWidth: '760px', margin: '0 auto' }}>
+      <header style={{ marginBottom: '2rem' }}>
+        <h1 style={{ fontSize: '1.75rem', fontWeight: 800, letterSpacing: '-0.03em', color: 'var(--text-color)', marginBottom: '0.35rem' }}>
+          Settings
+        </h1>
+        <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+          Customize your workspace experience
+        </p>
+      </header>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+
+        {/* Appearance */}
+        <SettingsCard>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <Sun size={20} aria-hidden="true" style={{ color: 'var(--accent-color)' }} />
+            <h2 style={{ fontSize: '1rem', fontWeight: 700, margin: 0, color: 'var(--text-color)' }}>
+              Appearance
+            </h2>
           </div>
 
-          <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '2rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
-              <Bell size={20} style={{ color: 'var(--accent-color)' }} />
-              <h3 style={{ fontSize: '1.1rem', fontWeight: 600, margin: 0 }}>Notifications</h3>
-            </div>
-            
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem', background: 'var(--bg-color)', borderRadius: '12px' }}>
-              <div>
-                <p style={{ margin: 0, fontWeight: 500 }}>Desktop Notifications</p>
-                <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Get alerts for task updates and team messages</p>
+          <SettingsRow
+            label="Theme"
+            description="Choose how CollabNode looks to you"
+            control={
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                {['light', 'dark', 'system'].map(opt => {
+                  const Icon = THEME_ICONS[opt];
+                  const isActive = theme === opt;
+                  return (
+                    <button
+                      key={opt}
+                      onClick={() => applyTheme(opt)}
+                      aria-pressed={isActive}
+                      title={`${opt.charAt(0).toUpperCase() + opt.slice(1)} mode`}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: '0.4rem',
+                        padding: '0.5rem 0.85rem',
+                        borderRadius: '8px',
+                        border: isActive ? '2px solid var(--accent-color)' : '2px solid var(--border-color)',
+                        background: isActive ? 'rgba(99,102,241,0.1)' : 'var(--surface-color)',
+                        color: isActive ? 'var(--accent-color)' : 'var(--text-secondary)',
+                        cursor: 'pointer', fontWeight: 600, fontSize: '0.8rem',
+                        fontFamily: 'inherit',
+                        transition: 'var(--transition)',
+                        textTransform: 'capitalize',
+                      }}
+                    >
+                      <Icon size={14} aria-hidden="true" />
+                      {opt}
+                    </button>
+                  );
+                })}
               </div>
-              <div 
-                onClick={() => setNotifications(!notifications)}
-                style={{
-                  width: '48px',
-                  height: '24px',
-                  background: notifications ? 'var(--accent-color)' : 'var(--border-color)',
-                  borderRadius: '12px',
-                  position: 'relative',
-                  cursor: 'pointer',
-                  transition: 'background 0.3s ease'
-                }}
-              >
-                <div style={{
-                  width: '20px',
-                  height: '20px',
-                  background: 'white',
-                  borderRadius: '50%',
-                  position: 'absolute',
-                  top: '2px',
-                  left: notifications ? '26px' : '2px',
-                  transition: 'left 0.3s ease',
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-                }} />
-              </div>
-            </div>
+            }
+          />
+        </SettingsCard>
+
+        {/* Notifications */}
+        <SettingsCard>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <Bell size={20} aria-hidden="true" style={{ color: 'var(--accent-color)' }} />
+            <h2 style={{ fontSize: '1rem', fontWeight: 700, margin: 0, color: 'var(--text-color)' }}>
+              Notifications
+            </h2>
           </div>
 
-          <button 
-            onClick={handleSave}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.5rem',
-              padding: '1rem',
-              background: 'var(--accent-color)',
-              color: 'white',
-              border: 'none',
-              borderRadius: '12px',
-              fontWeight: 600,
-              cursor: 'pointer',
-              marginTop: '1rem',
-              transition: 'var(--transition)'
-            }}
-            onMouseOver={(e) => e.currentTarget.style.filter = 'brightness(1.1)'}
-            onMouseOut={(e) => e.currentTarget.style.filter = 'none'}
-          >
-            <Save size={20} /> Save & Apply Changes
-          </button>
-        </div>
+          <SettingsRow
+            label="Desktop Notifications"
+            description="Get alerts for task updates and team messages"
+            control={
+              <ToggleSwitch
+                id="notif-toggle"
+                checked={notifications}
+                onChange={setNotifications}
+                label="Toggle desktop notifications"
+              />
+            }
+          />
+        </SettingsCard>
+
+        {/* Save */}
+        <button
+          onClick={handleSave}
+          className="btn btn-primary"
+          style={{ alignSelf: 'flex-start', padding: '0.75rem 2rem', fontSize: '0.95rem' }}
+        >
+          <Save size={18} aria-hidden="true" />
+          Save &amp; Apply
+        </button>
       </div>
+
+      <Toast message={toastMsg} />
     </div>
   );
 }

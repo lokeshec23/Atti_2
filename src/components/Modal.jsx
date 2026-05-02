@@ -1,143 +1,147 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useCallback } from 'react';
 import { X } from 'lucide-react';
 
 /**
- * A reusable, accessible, and premium Modal component.
- * Features: Glassmorphism, Smooth Animations, Focus Trapping, and Responsive Design.
+ * Accessible Modal component.
+ *
+ * Features:
+ * - ARIA dialog semantics (role, aria-modal, aria-labelledby)
+ * - Escape key closes modal
+ * - Focus trapped inside while open
+ * - Focus restored to triggering element on close
+ * - Background scroll locked while open
+ * - Smooth animations
  */
-export default function Modal({ isOpen, onClose, title, children }) {
-  const modalRef = useRef(null);
+export default function Modal({ isOpen, onClose, title, children, triggerRef }) {
+  const modalRef      = useRef(null);
+  const closeBtnRef   = useRef(null);
 
-  // Handle Escape key to close modal
+  // ── Focus trap & scroll lock ──────────────────────────────
   useEffect(() => {
-    const handleEscape = (e) => {
-      if (e.key === 'Escape') onClose();
+    if (!isOpen) return;
+
+    // Lock scroll
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    // Auto-focus the close button when modal opens
+    const raf = requestAnimationFrame(() => closeBtnRef.current?.focus());
+
+    // Escape to close
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        onClose();
+        return;
+      }
+
+      // Basic focus trap — keep Tab within modal
+      if (e.key === 'Tab' && modalRef.current) {
+        const focusable = modalRef.current.querySelectorAll(
+          'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])'
+        );
+        const first = focusable[0];
+        const last  = focusable[focusable.length - 1];
+
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last?.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first?.focus();
+        }
+      }
     };
 
-    if (isOpen) {
-      document.addEventListener('keydown', handleEscape);
-      modalRef.current?.focus();
-      document.body.style.overflow = 'hidden'; // Prevent scrolling background
-    }
+    document.addEventListener('keydown', handleKeyDown);
 
     return () => {
-      document.removeEventListener('keydown', handleEscape);
-      document.body.style.overflow = 'unset';
+      cancelAnimationFrame(raf);
+      document.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = prevOverflow || '';
+
+      // ── Restore focus to trigger on close ──
+      if (triggerRef?.current) {
+        triggerRef.current.focus();
+      }
     };
-  }, [isOpen, onClose]);
+  }, [isOpen, onClose, triggerRef]);
 
   if (!isOpen) return null;
 
   return (
-    <div 
+    <div
       className="modal-overlay"
       onClick={onClose}
       style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: 'rgba(15, 23, 42, 0.4)', // Slate 900 with low opacity
-        backdropFilter: 'blur(8px)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 2000,
-        padding: '1rem',
-        animation: 'modalFadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+        position: 'fixed', inset: 0,
+        backgroundColor: 'rgba(15, 23, 42, 0.5)',
+        backdropFilter: 'blur(6px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        zIndex: 2000, padding: '1rem',
+        animation: 'modalFadeIn 0.25s ease both',
       }}
+      aria-hidden="false"
     >
-      <div 
+      <div
         ref={modalRef}
-        className="modal-content"
-        onClick={(e) => e.stopPropagation()} 
-        tabIndex="-1"
         role="dialog"
         aria-modal="true"
         aria-labelledby="modal-title"
+        onClick={(e) => e.stopPropagation()}
         style={{
           backgroundColor: 'var(--surface-color)',
-          backgroundImage: 'linear-gradient(to bottom right, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0))',
-          borderRadius: '24px',
-          width: '100%',
-          maxWidth: '560px',
+          borderRadius: '20px',
+          width: '100%', maxWidth: '560px',
           maxHeight: 'min(90vh, 800px)',
-          display: 'flex',
-          flexDirection: 'column',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.1)',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
+          display: 'flex', flexDirection: 'column',
+          boxShadow: '0 25px 60px -12px rgba(0,0,0,0.4), inset 0 1px 1px rgba(255,255,255,0.06)',
+          border: '1px solid var(--border-color)',
+          animation: 'modalSlideUp 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both',
+          overflow: 'hidden',
           position: 'relative',
-          animation: 'modalSlideUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)',
-          overflow: 'hidden'
         }}
       >
-        {/* Decorative background element */}
-        <div style={{
-          position: 'absolute',
-          top: '-100px',
-          right: '-100px',
-          width: '200px',
-          height: '200px',
+        {/* Decorative glow */}
+        <div aria-hidden="true" style={{
+          position: 'absolute', top: '-80px', right: '-80px',
+          width: '180px', height: '180px',
           background: 'var(--accent-color)',
-          filter: 'blur(100px)',
-          opacity: 0.1,
-          pointerEvents: 'none'
+          filter: 'blur(80px)', opacity: 0.08,
+          pointerEvents: 'none',
         }} />
 
-        {/* Modal Header */}
-        <div style={{ 
-          padding: '1.75rem 2rem 1.25rem', 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
-          position: 'relative',
-          zIndex: 1
+        {/* Header */}
+        <div style={{
+          padding: '1.5rem 1.75rem 1.25rem',
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          borderBottom: '1px solid var(--border-color)',
+          flexShrink: 0, position: 'relative', zIndex: 1,
         }}>
-          <div>
-            <h2 id="modal-title" style={{ 
-              margin: 0, 
-              fontSize: '1.5rem', 
-              fontWeight: 700, 
-              color: 'var(--text-color)',
-              letterSpacing: '-0.025em'
-            }}>
-              {title}
-            </h2>
-          </div>
-          <button 
+          <h2 id="modal-title" style={{
+            margin: 0, fontSize: '1.25rem', fontWeight: 700,
+            color: 'var(--text-color)', letterSpacing: '-0.02em',
+          }}>
+            {title}
+          </h2>
+          <button
+            ref={closeBtnRef}
             onClick={onClose}
             aria-label="Close modal"
-            className="modal-close-btn"
+            className="modal-close-btn icon-btn"
             style={{
-              background: 'rgba(255, 255, 255, 0.05)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              color: 'var(--text-secondary)',
-              cursor: 'pointer',
-              width: '40px',
-              height: '40px',
-              borderRadius: '12px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-              outline: 'none'
+              width: '36px', height: '36px',
+              borderRadius: '10px', flexShrink: 0,
             }}
           >
-            <X size={20} />
+            <X size={18} aria-hidden="true" />
           </button>
         </div>
-        
-        {/* Modal Body */}
-        <div style={{ 
-          padding: '1.5rem 2rem 2rem', 
-          overflowY: 'auto',
-          flex: 1,
-          position: 'relative',
-          zIndex: 1,
-          scrollbarWidth: 'thin',
-          scrollbarColor: 'rgba(255, 255, 255, 0.1) transparent'
+
+        {/* Body */}
+        <div style={{
+          padding: '1.5rem 1.75rem 1.75rem',
+          overflowY: 'auto', flex: 1,
+          position: 'relative', zIndex: 1,
         }}>
           {children}
         </div>
@@ -146,23 +150,17 @@ export default function Modal({ isOpen, onClose, title, children }) {
       <style>{`
         @keyframes modalFadeIn {
           from { opacity: 0; }
-          to { opacity: 1; }
+          to   { opacity: 1; }
         }
         @keyframes modalSlideUp {
-          from { opacity: 0; transform: translateY(40px) scale(0.95); }
-          to { opacity: 1; transform: translateY(0) scale(1); }
+          from { opacity: 0; transform: translateY(32px) scale(0.96); }
+          to   { opacity: 1; transform: translateY(0) scale(1); }
         }
         .modal-close-btn:hover {
           background: rgba(239, 68, 68, 0.1) !important;
-          color: #ef4444 !important;
+          color: var(--danger) !important;
           transform: rotate(90deg);
-        }
-        .modal-content::-webkit-scrollbar {
-          width: 6px;
-        }
-        .modal-content::-webkit-scrollbar-thumb {
-          background: rgba(255, 255, 255, 0.1);
-          border-radius: 10px;
+          transition: var(--transition), transform 0.3s !important;
         }
       `}</style>
     </div>
