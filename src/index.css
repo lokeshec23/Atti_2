@@ -531,3 +531,106 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--text-secondary);
 }
+
+/* ============================================================
+   RESPONSIVE — Mobile (≤ 768px)
+   ============================================================ */
+@media (max-width: 768px) {
+  .app-container {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: 100%;
+    height: auto;
+    flex-direction: row;
+    align-items: center;
+    border-right: none;
+    border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
+  }
+
+  .sidebar-header {
+    padding: 0.75rem 1rem;
+    border-bottom: none;
+    border-right: 1px solid var(--border-color);
+    flex-shrink: 0;
+  }
+
+  .nav-links {
+    flex-direction: row;
+    padding: 0.4rem;
+    flex: 1;
+    overflow-x: auto;
+  }
+
+  .nav-item {
+    white-space: nowrap;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.82rem;
+  }
+
+  .task-board {
+    flex-direction: column;
+  }
+
+  .task-column {
+    min-width: unset;
+  }
+
+  .header {
+    flex-wrap: wrap;
+    height: auto;
+    padding: 0.75rem 1rem;
+    gap: 0.5rem;
+  }
+}
+
+/* ============================================================
+   REDUCED MOTION — Respect user preference
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  html {
+    transition: none;
+  }
+
+  .task-card,
+  .member-card,
+  .stat-card {
+    transition: none !important;
+  }
+}
+
+/* ============================================================
+   PRINT STYLES
+   ============================================================ */
+@media print {
+  .sidebar,
+  .header,
+  button,
+  .toast-container {
+    display: none !important;
+  }
+
+  .main-content {
+    overflow: visible;
+  }
+
+  .content-area {
+    overflow: visible;
+  }
+
+  body {
+    background: white;
+    color: black;
+  }
+}

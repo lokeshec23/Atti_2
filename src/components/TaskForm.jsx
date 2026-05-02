@@ -1,147 +1,141 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useId, useCallback } from 'react';
+import { TASK_STATUS, PRIORITY } from '../utils/constants';
 
 /**
  * Form for creating or editing a task.
- * Includes validation and clean UI.
+ * All fields use useId() for label association, aria-required, and aria-invalid.
  */
-export default function TaskForm({ onSubmit, initialData = null }) {
-  const [formData, setFormData] = useState({
-    title: '',
-    desc: '',
-    priority: 'medium',
-    status: 'todo'
-  });
+export default function TaskForm({ onSubmit, initialData = null, defaultStatus = TASK_STATUS.TODO }) {
+  const [formData, setFormData] = useState(() => ({
+    title:    initialData?.title    ?? '',
+    desc:     initialData?.desc     ?? '',
+    priority: initialData?.priority ?? PRIORITY.MEDIUM,
+    status:   initialData?.status   ?? defaultStatus,
+  }));
+  const [titleError, setTitleError] = useState('');
 
-  useEffect(() => {
-    if (initialData) {
-      setFormData(initialData);
-    }
-  }, [initialData]);
+  const titleId    = useId();
+  const descId     = useId();
+  const priorityId = useId();
+  const statusId   = useId();
+  const titleErrId = useId();
+
+  const update = useCallback((field, value) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  }, []);
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!formData.title.trim()) return;
-    
-    // Simple sanitization: trim all fields
-    const sanitizedData = {
-      ...formData,
-      title: formData.title.trim(),
-      desc: formData.desc.trim()
-    };
-    
-    onSubmit(sanitizedData);
+    const title = formData.title.trim();
+    if (!title) {
+      setTitleError('Task title is required.');
+      return;
+    }
+    if (title.length > 200) {
+      setTitleError('Title must be 200 characters or fewer.');
+      return;
+    }
+    setTitleError('');
+    onSubmit({
+      title,
+      desc:     formData.desc.trim().slice(0, 2000),
+      priority: formData.priority,
+      status:   formData.status,
+    });
   };
 
+  const inputStyle = {
+    padding: '0.75rem', borderRadius: '8px',
+    border: '1.5px solid var(--border-color)',
+    background: 'var(--bg-color)', color: 'var(--text-color)',
+    fontSize: '0.95rem', fontFamily: 'inherit', width: '100%',
+    transition: 'border-color 0.2s, box-shadow 0.2s',
+    outline: 'none',
+  };
+  const labelStyle = { fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-color)' };
+
   return (
-    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-        <label htmlFor="task-title" style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)' }}>
-          Task Title *
+    <form
+      onSubmit={handleSubmit}
+      aria-label={initialData ? 'Edit task form' : 'Create task form'}
+      noValidate
+      style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}
+    >
+      {/* Title */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+        <label htmlFor={titleId} style={labelStyle}>
+          Task Title <span aria-hidden="true" style={{ color: 'var(--danger)' }}>*</span>
         </label>
         <input
-          id="task-title"
+          id={titleId}
           type="text"
           required
+          aria-required="true"
+          aria-invalid={!!titleError}
+          aria-describedby={titleError ? titleErrId : undefined}
           placeholder="e.g. Implement Auth Flow"
           value={formData.title}
-          onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-          style={{
-            padding: '0.75rem',
-            borderRadius: '6px',
-            border: '1px solid var(--border-color)',
-            background: 'var(--bg-color)',
-            color: 'var(--text-color)',
-            fontSize: '1rem'
-          }}
+          onChange={e => { update('title', e.target.value); setTitleError(''); }}
+          className="form-input"
         />
+        {titleError && (
+          <p id={titleErrId} role="alert" style={{ fontSize: '0.8rem', color: 'var(--danger)', marginTop: '0.1rem' }}>
+            {titleError}
+          </p>
+        )}
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-        <label htmlFor="task-desc" style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)' }}>
-          Description
+      {/* Description */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+        <label htmlFor={descId} style={labelStyle}>
+          Description <span style={{ color: 'var(--text-secondary)', fontWeight: 400 }}>(optional)</span>
         </label>
         <textarea
-          id="task-desc"
-          rows="3"
-          placeholder="Detailed explanation of the task..."
+          id={descId}
+          rows={3}
+          placeholder="Detailed explanation of the task…"
           value={formData.desc}
-          onChange={(e) => setFormData({ ...formData, desc: e.target.value })}
-          style={{
-            padding: '0.75rem',
-            borderRadius: '6px',
-            border: '1px solid var(--border-color)',
-            background: 'var(--bg-color)',
-            color: 'var(--text-color)',
-            fontSize: '1rem',
-            resize: 'vertical'
-          }}
+          onChange={e => update('desc', e.target.value)}
+          className="form-input form-textarea"
+          style={{ resize: 'vertical' }}
         />
       </div>
 
+      {/* Priority + Status */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-          <label htmlFor="task-priority" style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)' }}>
-            Priority
-          </label>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+          <label htmlFor={priorityId} style={labelStyle}>Priority</label>
           <select
-            id="task-priority"
+            id={priorityId}
             value={formData.priority}
-            onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
-            style={{
-              padding: '0.75rem',
-              borderRadius: '6px',
-              border: '1px solid var(--border-color)',
-              background: 'var(--bg-color)',
-              color: 'var(--text-color)',
-              fontSize: '1rem'
-            }}
+            onChange={e => update('priority', e.target.value)}
+            className="form-input form-select"
           >
-            <option value="low">Low</option>
-            <option value="medium">Medium</option>
-            <option value="high">High</option>
+            <option value={PRIORITY.LOW}>Low</option>
+            <option value={PRIORITY.MEDIUM}>Medium</option>
+            <option value={PRIORITY.HIGH}>High</option>
           </select>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-          <label htmlFor="task-status" style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)' }}>
-            Status
-          </label>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+          <label htmlFor={statusId} style={labelStyle}>Status</label>
           <select
-            id="task-status"
+            id={statusId}
             value={formData.status}
-            onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-            style={{
-              padding: '0.75rem',
-              borderRadius: '6px',
-              border: '1px solid var(--border-color)',
-              background: 'var(--bg-color)',
-              color: 'var(--text-color)',
-              fontSize: '1rem'
-            }}
+            onChange={e => update('status', e.target.value)}
+            className="form-input form-select"
           >
-            <option value="todo">To Do</option>
-            <option value="in-progress">In Progress</option>
-            <option value="done">Done</option>
+            <option value={TASK_STATUS.TODO}>To Do</option>
+            <option value={TASK_STATUS.IN_PROGRESS}>In Progress</option>
+            <option value={TASK_STATUS.DONE}>Done</option>
           </select>
         </div>
       </div>
 
       <button
         type="submit"
-        style={{
-          marginTop: '1rem',
-          padding: '0.875rem',
-          borderRadius: '6px',
-          border: 'none',
-          background: 'var(--accent-color)',
-          color: 'white',
-          fontWeight: 600,
-          cursor: 'pointer',
-          transition: 'var(--transition)',
-          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-        }}
-        onMouseOver={(e) => e.currentTarget.style.filter = 'brightness(1.1)'}
-        onMouseOut={(e) => e.currentTarget.style.filter = 'none'}
+        className="btn btn-primary"
+        style={{ width: '100%', justifyContent: 'center', padding: '0.875rem', fontSize: '0.95rem', marginTop: '0.5rem' }}
       >
         {initialData ? 'Update Task' : 'Create Task'}
       </button>

@@ -1,6 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import { Save, Moon, Sun, Bell, Monitor, CheckCircle } from 'lucide-react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
+import { STORAGE_KEYS } from '../utils/constants';
 
 /* ── Simple Toast ────────────────────────────────────────── */
 function Toast({ message }) {
@@ -17,12 +18,12 @@ function Toast({ message }) {
 
 /* ── Toggle Switch ───────────────────────────────────────── */
 function ToggleSwitch({ checked, onChange, id, label }) {
-  function handleKeyDown(e) {
+  const handleKeyDown = useCallback((e) => {
     if (e.key === ' ' || e.key === 'Enter') {
       e.preventDefault();
       onChange(!checked);
     }
-  }
+  }, [checked, onChange]);
 
   return (
     <button
@@ -35,23 +36,16 @@ function ToggleSwitch({ checked, onChange, id, label }) {
       style={{
         width: '48px', height: '26px',
         background: checked ? 'var(--accent-color)' : 'var(--border-color)',
-        borderRadius: '13px',
-        border: 'none',
-        cursor: 'pointer',
-        position: 'relative',
-        transition: 'background 0.3s ease',
-        flexShrink: 0,
-        padding: 0,
+        borderRadius: '13px', border: 'none', cursor: 'pointer',
+        position: 'relative', transition: 'background 0.3s ease',
+        flexShrink: 0, padding: 0,
       }}
     >
       <span
         aria-hidden="true"
         style={{
-          position: 'absolute',
-          width: '20px', height: '20px',
-          background: 'white',
-          borderRadius: '50%',
-          top: '3px',
+          position: 'absolute', width: '20px', height: '20px',
+          background: 'white', borderRadius: '50%', top: '3px',
           left: checked ? '25px' : '3px',
           transition: 'left 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
           boxShadow: '0 2px 4px rgba(0,0,0,0.25)',
@@ -64,53 +58,51 @@ function ToggleSwitch({ checked, onChange, id, label }) {
 /* ── Section Card ────────────────────────────────────────── */
 function SettingsCard({ children }) {
   return (
-    <div style={{
-      background: 'var(--surface-color)',
-      border: '1px solid var(--border-color)',
-      borderRadius: '16px',
-      padding: '1.75rem',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '1.5rem',
-      boxShadow: 'var(--shadow-sm)',
-    }}>
+    <div
+      style={{
+        background: 'var(--surface-color)', border: '1px solid var(--border-color)',
+        borderRadius: '16px', padding: '1.75rem',
+        display: 'flex', flexDirection: 'column', gap: '1.5rem',
+        boxShadow: 'var(--shadow-sm)',
+      }}
+    >
       {children}
     </div>
   );
 }
 
-function SettingsRow({ label, description, control }) {
+function SettingsRow({ label, description, control, labelId }) {
   return (
-    <div style={{
-      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-      padding: '1rem 1.25rem',
-      background: 'var(--bg-color)',
-      borderRadius: '12px',
-      gap: '1rem',
-      flexWrap: 'wrap',
-    }}>
+    <div
+      style={{
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        padding: '1rem 1.25rem', background: 'var(--bg-color)',
+        borderRadius: '12px', gap: '1rem', flexWrap: 'wrap',
+      }}
+    >
       <div style={{ flex: 1, minWidth: '160px' }}>
-        <p style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-color)', margin: 0 }}>{label}</p>
+        <p id={labelId} style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-color)', margin: 0 }}>
+          {label}
+        </p>
         {description && (
-          <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '0.2rem 0 0 0' }}>
+          <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '0.2rem 0 0' }}>
             {description}
           </p>
         )}
       </div>
-      <div>{control}</div>
+      <div role="group" aria-labelledby={labelId}>{control}</div>
     </div>
   );
 }
 
 /* ── Settings Page ───────────────────────────────────────── */
 export default function Settings() {
-  const [theme, setTheme]                 = useLocalStorage('theme_preference', 'light');
-  const [notifications, setNotifications] = useLocalStorage('notification_preference', true);
+  const [theme, setTheme]                 = useLocalStorage(STORAGE_KEYS.THEME, 'light');
+  const [notifications, setNotifications] = useLocalStorage(STORAGE_KEYS.NOTIFICATIONS, true);
   const [toastMsg, setToastMsg]           = useState('');
 
   const THEME_ICONS = { light: Sun, dark: Moon, system: Monitor };
 
-  /** Apply theme immediately to the DOM */
   const applyTheme = useCallback((value) => {
     setTheme(value);
     const resolved = value === 'system'
@@ -119,15 +111,14 @@ export default function Settings() {
     document.documentElement.setAttribute('data-theme', resolved);
   }, [setTheme]);
 
-  const showToast = (msg) => {
+  const showToast = useCallback((msg) => {
     setToastMsg(msg);
     setTimeout(() => setToastMsg(''), 3000);
-  };
+  }, []);
 
-  const handleSave = () => {
-    // Theme is applied instantly; this just gives user confirmation
+  const handleSave = useCallback(() => {
     showToast('Settings saved successfully!');
-  };
+  }, [showToast]);
 
   return (
     <div style={{ padding: '2rem', maxWidth: '760px', margin: '0 auto' }}>
@@ -152,29 +143,29 @@ export default function Settings() {
           </div>
 
           <SettingsRow
+            labelId="theme-label"
             label="Theme"
             description="Choose how CollabNode looks to you"
             control={
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                {['light', 'dark', 'system'].map(opt => {
-                  const Icon = THEME_ICONS[opt];
+              <div role="radiogroup" aria-labelledby="theme-label" style={{ display: 'flex', gap: '0.5rem' }}>
+                {(['light', 'dark', 'system']).map(opt => {
+                  const Icon     = THEME_ICONS[opt];
                   const isActive = theme === opt;
                   return (
                     <button
                       key={opt}
                       onClick={() => applyTheme(opt)}
-                      aria-pressed={isActive}
-                      title={`${opt.charAt(0).toUpperCase() + opt.slice(1)} mode`}
+                      role="radio"
+                      aria-checked={isActive}
+                      aria-label={`${opt.charAt(0).toUpperCase() + opt.slice(1)} theme`}
                       style={{
                         display: 'flex', alignItems: 'center', gap: '0.4rem',
-                        padding: '0.5rem 0.85rem',
-                        borderRadius: '8px',
+                        padding: '0.5rem 0.85rem', borderRadius: '8px',
                         border: isActive ? '2px solid var(--accent-color)' : '2px solid var(--border-color)',
                         background: isActive ? 'rgba(99,102,241,0.1)' : 'var(--surface-color)',
                         color: isActive ? 'var(--accent-color)' : 'var(--text-secondary)',
                         cursor: 'pointer', fontWeight: 600, fontSize: '0.8rem',
-                        fontFamily: 'inherit',
-                        transition: 'var(--transition)',
+                        fontFamily: 'inherit', transition: 'var(--transition)',
                         textTransform: 'capitalize',
                       }}
                     >
@@ -198,6 +189,7 @@ export default function Settings() {
           </div>
 
           <SettingsRow
+            labelId="notif-label"
             label="Desktop Notifications"
             description="Get alerts for task updates and team messages"
             control={
@@ -216,6 +208,7 @@ export default function Settings() {
           onClick={handleSave}
           className="btn btn-primary"
           style={{ alignSelf: 'flex-start', padding: '0.75rem 2rem', fontSize: '0.95rem' }}
+          aria-label="Save and apply settings"
         >
           <Save size={18} aria-hidden="true" />
           Save &amp; Apply
